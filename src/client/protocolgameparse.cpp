@@ -67,6 +67,11 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
                     if (g_game.getFeature(Otc::GameLoginPending)) {
                         parsePendingGame(msg);
                     } else {
+                        g_logger.debug("Parsing login message...");
+                        g_logger.debug("Message content:");
+                        g_logger.debug("Current read position: {}", msg->getReadPos());
+                        g_logger.debug("Message size: {}", msg->getMessageSize());
+                        g_logger.debug("Unread size: {}", msg->getUnreadSize());
                         parseLogin(msg);
                     }
                     break;
@@ -605,42 +610,55 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
 
 void ProtocolGame::parseLogin(const InputMessagePtr& msg) const
 {
+    g_logger.debug("Parsing login message...");
+
     const uint32_t playerId = msg->getU32();
+    g_logger.debug("Player ID: {}", playerId);
+
     const uint16_t serverBeat = msg->getU16();
+    g_logger.debug("Server beat: {}", serverBeat);
 
     if (g_game.getFeature(Otc::GameNewSpeedLaw)) {
+        g_logger.debug("Parsing new speed law values");
         Creature::speedA = msg->getDouble();
         Creature::speedB = msg->getDouble();
         Creature::speedC = msg->getDouble();
+        g_logger.debug("Speed values - A: {}, B: {}, C: {}", Creature::speedA, Creature::speedB, Creature::speedC);
     }
 
     bool canReportBugs = false;
     if (!g_game.getFeature(Otc::GameDynamicBugReporter)) {
         canReportBugs = msg->getU8() > 0;
+        g_logger.debug("Can report bugs: {}", canReportBugs);
     }
 
     if (g_game.getClientVersion() >= 1054) {
-        msg->getU8(); // can change pvp frame option
+        const uint8_t pvpFrameOption = msg->getU8();
+        g_logger.debug("PvP frame option: {}", pvpFrameOption);
     }
 
     if (g_game.getClientVersion() >= 1058) {
         const uint8_t expertModeEnabled = msg->getU8();
+        g_logger.debug("Expert mode enabled: {}", expertModeEnabled);
         g_game.setExpertPvpMode(expertModeEnabled);
     }
 
     if (g_game.getFeature(Otc::GameIngameStore)) {
-        // URL to ingame store images
-        msg->getString();
+        g_logger.debug("Parsing ingame store data");
+        const auto& storeUrl = msg->getString();
+        g_logger.debug("Store URL: {}", storeUrl);
 
-        // premium coin package size
-        // e.g you can only buy packs of 25, 50, 75, .. coins in the market
-        msg->getU16();
+        const uint16_t coinPackageSize = msg->getU16();
+        g_logger.debug("Coin package size: {}", coinPackageSize);
     }
 
     if (g_game.getClientVersion() >= 1281) {
-        msg->getU8(); // exiva button enabled (bool)
+        const uint8_t exivaEnabled = msg->getU8();
+        g_logger.debug("Exiva enabled: {}", exivaEnabled);
+
         if (g_game.getFeature(Otc::GameTournamentPackets)) {
-            msg->getU8(); // Tournament button (bool)
+            const uint8_t tournamentButton = msg->getU8();
+            g_logger.debug("Tournament button: {}", tournamentButton);
         }
     }
 
@@ -648,7 +666,9 @@ void ProtocolGame::parseLogin(const InputMessagePtr& msg) const
     g_game.setServerBeat(serverBeat);
     g_game.setCanReportBugs(canReportBugs);
 
+    g_logger.debug("Processing login...");
     g_game.processLogin();
+    g_logger.debug("Login processing complete");
 }
 
 void ProtocolGame::parseBugReport(const InputMessagePtr& msg)

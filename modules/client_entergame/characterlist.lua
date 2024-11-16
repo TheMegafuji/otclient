@@ -45,6 +45,13 @@ local function tryLogin(charInfo, tries)
 
     CharacterList.hide()
 
+    g_logger.info("Login Information:")
+    g_logger.info(string.format("  Account: %s", G.account))
+    g_logger.info(string.format("  World Name: %s", charInfo.worldName))
+    g_logger.info(string.format("  World Host: %s", charInfo.worldHost))
+    g_logger.info(string.format("  World Port: %d", charInfo.worldPort))
+    g_logger.info(string.format("  Character Name: %s", charInfo.characterName))
+    g_logger.info(string.format("  Session Key Length: %d", #(G.sessionKey or "")))
     g_game.loginWorld(G.account, G.password, charInfo.worldName, charInfo.worldHost, charInfo.worldPort,
                       charInfo.characterName, G.authenticatorToken, G.sessionKey)
 
