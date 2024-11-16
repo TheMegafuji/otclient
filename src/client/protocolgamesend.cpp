@@ -60,7 +60,7 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     msg->addU16(g_game.getProtocolVersion());
 
     if (g_game.getFeature(Otc::GameClientVersion)) {
-        g_logger.debug("Adding client version: {}", g_game.getClientVersion());
+        g_logger.debug(stdext::format("Adding client version: {}", g_game.getClientVersion()));
         msg->addU32(g_game.getClientVersion());
     }
 
@@ -70,7 +70,7 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     }
 
     if (g_game.getFeature(Otc::GameContentRevision)) {
-        g_logger.debug("Adding content revision: {}", g_things.getContentRevision());
+        g_logger.debug(stdext::format("Adding content revision: {}", g_things.getContentRevision()));
         msg->addU16(g_things.getContentRevision());
     }
 
@@ -87,8 +87,8 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
         msg->addU8(0);
         // xtea key
         generateXteaKey();
-        g_logger.debug("Generated XTEA key: [{}, {}, {}, {}]", 
-            m_xteaKey[0], m_xteaKey[1], m_xteaKey[2], m_xteaKey[3]);
+        g_logger.debug(stdext::format("Generated XTEA key: [{}, {}, {}, {}]", 
+            m_xteaKey[0], m_xteaKey[1], m_xteaKey[2], m_xteaKey[3]));
         msg->addU32(m_xteaKey[0]);
         msg->addU32(m_xteaKey[1]);
         msg->addU32(m_xteaKey[2]);
@@ -105,11 +105,11 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     } else {
         g_logger.debug("Adding account credentials");
         if (g_game.getFeature(Otc::GameAccountNames)) {
-            g_logger.debug("Using account name: {}", m_accountName);
+            g_logger.debug(stdext::format("Using account name: {}", m_accountName));
             msg->addString(m_accountName);
         } else {
             const auto accountNumber = stdext::from_string<uint32_t>(m_accountName);
-            g_logger.debug("Using account number: {}", accountNumber);
+            g_logger.debug(stdext::format("Using account number: {}", accountNumber));
             msg->addU32(accountNumber);
         }
 
@@ -123,8 +123,8 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     }
 
     if (g_game.getFeature(Otc::GameChallengeOnLogin)) {
-        g_logger.debug("Adding challenge data - timestamp: {}, random: {}", 
-            challengeTimestamp, challengeRandom);
+        g_logger.debug(stdext::format("Adding challenge data - timestamp: {}, random: {}", 
+            challengeTimestamp, challengeRandom));
         msg->addU32(challengeTimestamp);
         msg->addU8(challengeRandom);
     }
@@ -138,7 +138,7 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     // complete the bytes for rsa encryption with zeros
     const int paddingBytes = g_crypt.rsaGetSize() - (msg->getMessageSize() - offset);
     assert(paddingBytes >= 0);
-    g_logger.debug("Adding {} padding bytes for RSA encryption", paddingBytes);
+    g_logger.debug(stdext::format("Adding {} padding bytes for RSA encryption", paddingBytes));
     msg->addPaddingBytes(paddingBytes);
 
     // encrypt with RSA
@@ -152,8 +152,8 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
         enableChecksum();
     }
 
-    g_logger.debug("Sending login message");
-    g_logger.debug("Message size: {}, content: {}", msg->getMessageSize(), msg->getBuffer());
+    g_logger.debug(stdext::format("Sending login message"));
+    g_logger.debug(stdext::format("Message size: {}, content: {}", msg->getMessageSize(), msg->getBuffer()));
     send(msg);
 
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {
