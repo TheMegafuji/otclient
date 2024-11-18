@@ -51,65 +51,66 @@ void ProtocolGame::sendExtendedOpcode(const uint8_t opcode, const std::string& b
 
 void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint8_t challengeRandom)
 {
-    g_logger.debug("Sending login packet...");
+    g_logger.info("Sending login packet...");
     const auto& msg = std::make_shared<OutputMessage>();
 
-    g_logger.debug("Adding protocol header");
+    g_logger.info("Adding protocol header");
     msg->addU8(Proto::ClientPendingGame);
     msg->addU16(g_game.getOs());
     msg->addU16(g_game.getProtocolVersion());
 
     if (g_game.getFeature(Otc::GameClientVersion)) {
-        g_logger.debug(stdext::format("Adding client version: {}", g_game.getClientVersion()));
+        g_logger.info("Adding client version: " + std::to_string(g_game.getClientVersion()));
         msg->addU32(g_game.getClientVersion());
     }
 
     if (g_game.getClientVersion() >= 1281) {
-        g_logger.debug("Adding client version string for 1281+");
+        g_logger.info("Adding client version string for 1281+");
         msg->addString(std::to_string(g_game.getClientVersion()));
     }
 
     if (g_game.getFeature(Otc::GameContentRevision)) {
-        g_logger.debug(stdext::format("Adding content revision: {}", g_things.getContentRevision()));
+        g_logger.info("Adding content revision: " + std::to_string(g_things.getContentRevision()));
         msg->addU16(g_things.getContentRevision());
     }
 
     if (g_game.getFeature(Otc::GamePreviewState)) {
-        g_logger.debug("Adding preview state flag");
+        g_logger.info("Adding preview state flag");
         msg->addU8(0);
     }
 
     const int offset = msg->getMessageSize();
 
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {
-        g_logger.debug("Setting up encryption");
+        g_logger.info("Setting up encryption");
         // first RSA byte must be 0
         msg->addU8(0);
         // xtea key
         generateXteaKey();
-        g_logger.debug(stdext::format("Generated XTEA key: [{}, {}, {}, {}]", 
-            m_xteaKey[0], m_xteaKey[1], m_xteaKey[2], m_xteaKey[3]));
+        g_logger.info("Generated XTEA key: [" + std::to_string(m_xteaKey[0]) + ", " + 
+            std::to_string(m_xteaKey[1]) + ", " + std::to_string(m_xteaKey[2]) + ", " + 
+            std::to_string(m_xteaKey[3]) + "]");
         msg->addU32(m_xteaKey[0]);
         msg->addU32(m_xteaKey[1]);
         msg->addU32(m_xteaKey[2]);
         msg->addU32(m_xteaKey[3]);
     }
 
-    g_logger.debug("Adding GM flag");
+    g_logger.info("Adding GM flag");
     msg->addU8(0); // is gm set?
 
     if (g_game.getFeature(Otc::GameSessionKey)) {
-        g_logger.debug("Adding session key and character name");
+        g_logger.info("Adding session key and character name");
         msg->addString(m_sessionKey);
         msg->addString(m_characterName);
     } else {
-        g_logger.debug("Adding account credentials");
+        g_logger.info("Adding account credentials");
         if (g_game.getFeature(Otc::GameAccountNames)) {
-            g_logger.debug(stdext::format("Using account name: {}", m_accountName));
+            g_logger.info("Using account name: " + std::string(m_accountName));
             msg->addString(m_accountName);
         } else {
             const auto accountNumber = stdext::from_string<uint32_t>(m_accountName);
-            g_logger.debug(stdext::format("Using account number: {}", accountNumber));
+            g_logger.info("Using account number: " + std::to_string(accountNumber));
             msg->addU32(accountNumber);
         }
 
@@ -117,52 +118,52 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
         msg->addString(m_accountPassword);
 
         if (g_game.getFeature(Otc::GameAuthenticator)) {
-            g_logger.debug("Adding authenticator token");
+            g_logger.info("Adding authenticator token");
             msg->addString(m_authenticatorToken);
         }
     }
 
     if (g_game.getFeature(Otc::GameChallengeOnLogin)) {
-        g_logger.debug(stdext::format("Adding challenge data - timestamp: {}, random: {}", 
-            challengeTimestamp, challengeRandom));
+        g_logger.info("Adding challenge data - timestamp: " + std::to_string(challengeTimestamp) + 
+            ", random: " + std::to_string(challengeRandom));
         msg->addU32(challengeTimestamp);
         msg->addU8(challengeRandom);
     }
 
     const auto& extended = callLuaField<std::string>("getLoginExtendedData");
     if (!extended.empty()) {
-        g_logger.debug("Adding extended login data");
+        g_logger.info("Adding extended login data");
         msg->addString(extended);
     }
 
     // complete the bytes for rsa encryption with zeros
     const int paddingBytes = g_crypt.rsaGetSize() - (msg->getMessageSize() - offset);
     assert(paddingBytes >= 0);
-    g_logger.debug(stdext::format("Adding {} padding bytes for RSA encryption", paddingBytes));
+    g_logger.info("Adding " + std::to_string(paddingBytes) + " padding bytes for RSA encryption");
     msg->addPaddingBytes(paddingBytes);
 
     // encrypt with RSA
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {
-        g_logger.debug("Encrypting message with RSA");
+        g_logger.info("Encrypting message with RSA");
         msg->encryptRsa();
     }
 
     if (g_game.getFeature(Otc::GameProtocolChecksum)) {
-        g_logger.debug("Enabling protocol checksum");
+        g_logger.info("Enabling protocol checksum");
         enableChecksum();
     }
 
-    g_logger.debug(stdext::format("Sending login message"));
-    g_logger.debug(stdext::format("Message size: {}, content: {}", msg->getMessageSize(), msg->getBuffer()));
+    g_logger.info("Sending login message");
+    g_logger.info("Message size: " + std::to_string(msg->getMessageSize()) + ", content: " + msg->getBuffer());
     send(msg);
 
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {
-        g_logger.debug("Enabling XTEA encryption");
+        g_logger.info("Enabling XTEA encryption");
         enableXteaEncryption();
     }
 
     if (g_game.getFeature(Otc::GameSequencedPackets)) {
-        g_logger.debug("Enabling sequenced packets");
+        g_logger.info("Enabling sequenced packets");
         enabledSequencedPackets();
     }
 }

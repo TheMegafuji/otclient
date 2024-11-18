@@ -27,7 +27,7 @@
 void ProtocolGame::login(const std::string_view accountName, const std::string_view accountPassword, const std::string_view host, uint16_t port,
                          const std::string_view characterName, const std::string_view authenticatorToken, const std::string_view sessionKey)
 {
-    g_logger.info(stdext::format("Logging in with account: {}, character: {}, host: {}, port: {}", accountName, characterName, host, port));
+    g_logger.info("Logging in with account: " + std::string(accountName) + ", character: " + std::string(characterName) + ", host: " + std::string(host) + ", port: " + std::to_string(port));
 
     m_accountName = accountName;
     m_accountPassword = accountPassword;

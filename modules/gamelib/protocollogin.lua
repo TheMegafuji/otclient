@@ -38,51 +38,65 @@ function ProtocolLogin:sendLoginPacket()
     local msg = OutputMessage.create()
     msg:addU8(ClientOpcodes.ClientEnterAccount)
     msg:addU16(g_game.getOs())
-
     msg:addU16(g_game.getProtocolVersion())
+
+    -- Build login data object to understand the packet
+    local loginData = {
+        os = g_game.getOs(),
+        protocolVersion = g_game.getProtocolVersion()
+    }
 
     if g_game.getFeature(GameClientVersion) then
         msg:addU32(g_game.getClientVersion())
+        loginData.clientVersion = g_game.getClientVersion()
     end
 
     if g_game.getFeature(GameContentRevision) then
         msg:addU16(g_things.getContentRevision())
         msg:addU16(0)
+        loginData.contentRevision = g_things.getContentRevision()
     else
         msg:addU32(g_things.getDatSignature())
+        loginData.datSignature = g_things.getDatSignature()
     end
+
     msg:addU32(g_sprites.getSprSignature())
     msg:addU32(PIC_SIGNATURE)
+    loginData.sprSignature = g_sprites.getSprSignature()
+    loginData.picSignature = PIC_SIGNATURE
 
     if g_game.getFeature(GamePreviewState) then
         msg:addU8(0)
+        loginData.previewState = 0
     end
 
     local offset = msg:getMessageSize()
     if g_game.getFeature(GameLoginPacketEncryption) then
-        -- first RSA byte must be 0
         msg:addU8(0)
-
-        -- xtea key
         self:generateXteaKey()
         local xteaKey = self:getXteaKey()
         msg:addU32(xteaKey[1])
         msg:addU32(xteaKey[2])
         msg:addU32(xteaKey[3])
         msg:addU32(xteaKey[4])
+        loginData.xteaKey = xteaKey
     end
 
     if g_game.getFeature(GameAccountNames) then
         msg:addString(self.accountName)
+        loginData.accountName = self.accountName
     else
         msg:addU32(tonumber(self.accountName))
+        loginData.accountNumber = tonumber(self.accountName)
     end
 
     msg:addString(self.accountPassword)
+    loginData.passwordLength = #self.accountPassword
 
     if self.getLoginExtendedData then
         local data = self:getLoginExtendedData()
         msg:addString(data)
+        loginData.extendedData = data
     end
 
     local paddingBytes = g_crypt.rsaGetSize() - (msg:getMessageSize() - offset)
@@ -90,33 +104,38 @@ function ProtocolLogin:sendLoginPacket()
     for i = 1, paddingBytes do
         msg:addU8(math.random(0, 0xff))
     end
+    loginData.rsaPaddingBytes = paddingBytes
 
     if g_game.getFeature(GameLoginPacketEncryption) then
         msg:encryptRsa()
+        loginData.rsaEncrypted = true
     end
 
     if g_game.getFeature(GameOGLInformation) then
-        msg:addU8(1) -- unknown
-        msg:addU8(1) -- unknown
+        msg:addU8(1)
+        msg:addU8(1)
 
         if g_game.getClientVersion() >= 1072 then
-            msg:addString(string.format('%s %s', g_graphics.getVendor(), g_graphics.getRenderer()))
+            local renderer = string.format('%s %s', g_graphics.getVendor(), g_graphics.getRenderer())
+            msg:addString(renderer)
+            loginData.renderer = renderer
         else
             msg:addString(g_graphics.getRenderer())
+            loginData.renderer = g_graphics.getRenderer()
         end
         msg:addString(g_graphics.getVersion())
+        loginData.glVersion = g_graphics.getVersion()
     end
 
-    -- add RSA encrypted auth token
     if g_game.getFeature(GameAuthenticator) then
         offset = msg:getMessageSize()
-
-        -- first RSA byte must be 0
         msg:addU8(0)
         msg:addString(self.authenticatorToken)
+        loginData.authenticatorToken = #self.authenticatorToken > 0
 
         if g_game.getFeature(GameSessionKey) then
             msg:addU8(booleantonumber(self.stayLogged))
+            loginData.stayLogged = self.stayLogged
         end
 
         paddingBytes = g_crypt.rsaGetSize() - (msg:getMessageSize() - offset)
@@ -124,13 +143,19 @@ function ProtocolLogin:sendLoginPacket()
         for i = 1, paddingBytes do
             msg:addU8(math.random(0, 0xff))
         end
+        loginData.authPaddingBytes = paddingBytes
 
         msg:encryptRsa()
     end
 
     if g_game.getFeature(GameProtocolChecksum) then
         self:enableChecksum()
+        loginData.checksumEnabled = true
     end
+
+    -- Log the login data object
+    g_logger.info("Login packet data:")
+    g_logger.info(json.encode(loginData, {pretty = true}))
 
     self:send(msg)
 
