@@ -106,7 +106,7 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     } else {
         g_logger.info("Adding account credentials");
         if (g_game.getFeature(Otc::GameAccountNames)) {
-            g_logger.info("Using account name: " + std::string(m_accountName));
+            g_logger.info("Using account name: " + std::string(m_accountName)); // Convert std::string_view to std::string
             msg->addString(m_accountName);
         } else {
             const auto accountNumber = stdext::from_string<uint32_t>(m_accountName);
@@ -154,7 +154,7 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     }
 
     g_logger.info("Sending login message");
-    g_logger.info("Message size: " + std::to_string(msg->getMessageSize()) + ", content: " + msg->getBuffer());
+    g_logger.info(stdext::format("Message size: %d, content: %s", msg->getMessageSize(), msg->getBuffer()));
     send(msg);
 
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {
