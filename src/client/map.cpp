@@ -595,7 +595,7 @@ void Map::setCentralPosition(const Position& centralPosition)
                 localPlayer->onDisappear();
             localPlayer->setPosition(pos);
             localPlayer->onAppear();
-            g_logger.debug("forced player position update");
+            g_logger.info("forced player position update");
         }
     });
 

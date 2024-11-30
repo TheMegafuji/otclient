@@ -37,9 +37,9 @@ g_logger.info(g_app.getName() .. ' ' .. g_app.getVersion() .. ' rev ' .. g_app.g
 -- setup lua debugger
 if os.getenv("LOCAL_LUA_DEBUGGER_VSCODE") == "1" then
     require("lldebugger").start()
-    g_logger.debug("Started LUA debugger.")
+    g_logger.info("Started LUA debugger.")
 else
-    g_logger.debug("LUA debugger not started (not launched with VSCode local-lua).")
+    g_logger.info("LUA debugger not started (not launched with VSCode local-lua).")
 end
 
 -- add data directory to the search path

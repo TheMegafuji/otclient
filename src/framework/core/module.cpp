@@ -86,7 +86,7 @@ bool Module::load()
 
         m_loaded = true;
 
-        g_logger.debug(stdext::format("Loaded module '%s' (%s)", m_name, 
+        g_logger.info(stdext::format("Loaded module '%s' (%s)", m_name, 
                        stdext::format("%.2fs", (stdext::millis() - startTime) / 1000.0)));
     } catch (const stdext::exception& e) {
         // remove from package.loaded

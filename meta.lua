@@ -3495,7 +3495,7 @@ function g_logger.setLogFile(file) end
 function g_logger.setOnLog(callback) end
 
 ---@param message string
-function g_logger.debug(message) end
+function g_logger.info(message) end
 
 ---@param message string
 function g_logger.info(message) end

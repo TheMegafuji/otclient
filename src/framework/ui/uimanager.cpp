@@ -531,7 +531,7 @@ UIWidgetPtr UIManager::loadUI(const std::string& file, const UIWidgetPtr& parent
         }
 
         if (!widgetNode) {
-            g_logger.debug(stdext::format("failed to load a widget from '%s'", file));
+            g_logger.info(stdext::format("failed to load a widget from '%s'", file));
             return nullptr;
         }
 

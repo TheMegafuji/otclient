@@ -67,11 +67,11 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
                     if (g_game.getFeature(Otc::GameLoginPending)) {
                         parsePendingGame(msg);
                     } else {
-                        g_logger.debug("Parsing login message...");
-                        g_logger.debug("Message content:");
-                        g_logger.debug(stdext::format("Current read position: {}", msg->getReadPos()));
-                        g_logger.debug(stdext::format("Message size: {}", msg->getMessageSize()));
-                        g_logger.debug(stdext::format("Unread size: {}", msg->getUnreadSize()));
+                        g_logger.info("Parsing login message...");
+                        g_logger.info("Message content:");
+                        g_logger.info(stdext::format("Current read position: {}", msg->getReadPos()));
+                        g_logger.info(stdext::format("Message size: {}", msg->getMessageSize()));
+                        g_logger.info(stdext::format("Unread size: {}", msg->getUnreadSize()));
                         parseLogin(msg);
                     }
                     break;
@@ -610,55 +610,55 @@ void ProtocolGame::parseMessage(const InputMessagePtr& msg)
 
 void ProtocolGame::parseLogin(const InputMessagePtr& msg) const
 {
-    g_logger.debug("Parsing login message...");
+    g_logger.info("Parsing login message...");
 
     const uint32_t playerId = msg->getU32();
-    g_logger.debug(stdext::format("Player ID: {}", playerId));
+    g_logger.info(stdext::format("Player ID: {}", playerId));
 
     const uint16_t serverBeat = msg->getU16();
-    g_logger.debug(stdext::format("Server beat: {}", serverBeat));
+    g_logger.info(stdext::format("Server beat: {}", serverBeat));
 
     if (g_game.getFeature(Otc::GameNewSpeedLaw)) {
-        g_logger.debug("Parsing new speed law values");
+        g_logger.info("Parsing new speed law values");
         Creature::speedA = msg->getDouble();
         Creature::speedB = msg->getDouble();
         Creature::speedC = msg->getDouble();
-        g_logger.debug(stdext::format("Speed values - A: {}, B: {}, C: {}", Creature::speedA, Creature::speedB, Creature::speedC));
+        g_logger.info(stdext::format("Speed values - A: {}, B: {}, C: {}", Creature::speedA, Creature::speedB, Creature::speedC));
     }
 
     bool canReportBugs = false;
     if (!g_game.getFeature(Otc::GameDynamicBugReporter)) {
         canReportBugs = msg->getU8() > 0;
-        g_logger.debug(stdext::format("Can report bugs: {}", canReportBugs));
+        g_logger.info(stdext::format("Can report bugs: {}", canReportBugs));
     }
 
     if (g_game.getClientVersion() >= 1054) {
         const uint8_t pvpFrameOption = msg->getU8();
-        g_logger.debug(stdext::format("PvP frame option: {}", pvpFrameOption));
+        g_logger.info(stdext::format("PvP frame option: {}", pvpFrameOption));
     }
 
     if (g_game.getClientVersion() >= 1058) {
         const uint8_t expertModeEnabled = msg->getU8();
-        g_logger.debug(stdext::format("Expert mode enabled: {}", expertModeEnabled));
+        g_logger.info(stdext::format("Expert mode enabled: {}", expertModeEnabled));
         g_game.setExpertPvpMode(expertModeEnabled);
     }
 
     if (g_game.getFeature(Otc::GameIngameStore)) {
-        g_logger.debug("Parsing ingame store data");
+        g_logger.info("Parsing ingame store data");
         const auto& storeUrl = msg->getString();
-        g_logger.debug(stdext::format("Store URL: {}", storeUrl));
+        g_logger.info(stdext::format("Store URL: {}", storeUrl));
 
         const uint16_t coinPackageSize = msg->getU16();
-        g_logger.debug(stdext::format("Coin package size: {}", coinPackageSize));
+        g_logger.info(stdext::format("Coin package size: {}", coinPackageSize));
     }
 
     if (g_game.getClientVersion() >= 1281) {
         const uint8_t exivaEnabled = msg->getU8();
-        g_logger.debug(stdext::format("Exiva enabled: {}", exivaEnabled));
+        g_logger.info(stdext::format("Exiva enabled: {}", exivaEnabled));
 
         if (g_game.getFeature(Otc::GameTournamentPackets)) {
             const uint8_t tournamentButton = msg->getU8();
-            g_logger.debug(stdext::format("Tournament button: {}", tournamentButton));
+            g_logger.info(stdext::format("Tournament button: {}", tournamentButton));
         }
     }
 
@@ -666,9 +666,9 @@ void ProtocolGame::parseLogin(const InputMessagePtr& msg) const
     g_game.setServerBeat(serverBeat);
     g_game.setCanReportBugs(canReportBugs);
 
-    g_logger.debug("Processing login...");
+    g_logger.info("Processing login...");
     g_game.processLogin();
-    g_logger.debug("Login processing complete");
+    g_logger.info("Login processing complete");
 }
 
 void ProtocolGame::parseBugReport(const InputMessagePtr& msg)
@@ -2430,7 +2430,7 @@ void ProtocolGame::parseTextMessage(const InputMessagePtr& msg)
     const Otc::MessageMode mode = Proto::translateMessageModeFromServer(code);
     std::string text;
 
-    g_logger.debug(stdext::format("[ProtocolGame::parseTextMessage] code: %d, mode: %d", code, mode));
+    g_logger.info(stdext::format("[ProtocolGame::parseTextMessage] code: %d, mode: %d", code, mode));
 
     switch (mode) {
         case Otc::MessageChannelManagement:

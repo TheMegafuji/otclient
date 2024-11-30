@@ -154,7 +154,17 @@ void ProtocolGame::sendLoginPacket(const uint32_t challengeTimestamp, const uint
     }
 
     g_logger.info("Sending login message");
-    g_logger.info(stdext::format("Message size: %d, content: %s", msg->getMessageSize(), msg->getBuffer()));
+    g_logger.info(stdext::format("Message size: %d", msg->getMessageSize()));
+    // Log the full message content as hex dump for debugging
+    const auto* buffer = reinterpret_cast<const uint8_t*>(msg->getBuffer().data());
+    const int size = msg->getMessageSize();
+    std::string hexDump;
+    for (int i = 0; i < size; ++i) {
+        hexDump += stdext::format("%02X ", buffer[i]);
+        if ((i + 1) % 16 == 0) hexDump += "\n";
+    }
+    g_logger.info("Message hex dump:");
+    g_logger.info(hexDump);
     send(msg);
 
     if (g_game.getFeature(Otc::GameLoginPacketEncryption)) {

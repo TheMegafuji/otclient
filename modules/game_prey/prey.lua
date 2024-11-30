@@ -614,7 +614,7 @@ function Prey.onResourcesBalanceChange(balance, oldBalance, type)
         bonusRerolls = balance
     end
     local player = g_game.getLocalPlayer()
-    g_logger.debug('' .. tostring(type) .. ', ' .. tostring(balance))
+    g_logger.info('' .. tostring(type) .. ', ' .. tostring(balance))
     if player then
         preyWindow.wildCards:setText(tostring(player:getResourceBalance(ResourceTypes.PREY_WILDCARDS)))
         preyWindow.gold:setText(comma_value(player:getTotalMoney()))

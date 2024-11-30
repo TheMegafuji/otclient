@@ -73,7 +73,7 @@ bool ResourceManager::discoverWorkDir(const std::string& existentFile)
             continue;
 
         if (PHYSFS_exists(existentFile.c_str())) {
-            g_logger.debug(stdext::format("Found work dir at '%s'", dir));
+            g_logger.info(stdext::format("Found work dir at '%s'", dir));
             m_workDir = dir;
             found = true;
             break;

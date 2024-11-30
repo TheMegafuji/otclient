@@ -82,6 +82,7 @@ function ProtocolLogin:sendLoginPacket()
         loginData.xteaKey = xteaKey
     end
 
+    g_logger.info("Preparing login packet with account name: " .. self.accountName)
     if g_game.getFeature(GameAccountNames) then
         msg:addString(self.accountName)
         loginData.accountName = self.accountName
@@ -157,6 +158,17 @@ function ProtocolLogin:sendLoginPacket()
     g_logger.info("Login packet data:")
     g_logger.info(json.encode(loginData, {pretty = true}))
 
+    g_logger.info("Sending login packet")
+    g_logger.info(string.format("Message size: %d, content: %s", msg:getMessageSize(), msg:getBuffer()))
+    -- Log the full message content as hex dump for debugging
+    local buffer = msg:getBuffer()
+    local hexDump = ""
+    for i = 1, #buffer do
+        hexDump = hexDump .. string.format("%02X ", buffer:byte(i))
+        if i % 16 == 0 then hexDump = hexDump .. "\n" end
+    end
+    g_logger.info("Message hex dump:")
+    g_logger.info(hexDump)
     self:send(msg)
 
     if g_game.getFeature(GameLoginPacketEncryption) then
@@ -181,6 +193,7 @@ end
 function ProtocolLogin:onRecv(msg)
     while not msg:eof() do
         local opcode = msg:getU8()
+        g_logger.info("Received message with opcode: " .. opcode)
         if opcode == LoginServerErrorNew then
             self:parseError(msg)
         elseif opcode == LoginServerError then
@@ -303,5 +316,6 @@ end
 
 function ProtocolLogin:onError(msg, code)
     local text = translateNetworkError(code, self:isConnecting(), msg)
+    g_logger.error("Login error: " .. text)
     signalcall(self.onLoginError, self, text)
 end

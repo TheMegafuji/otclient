@@ -485,7 +485,7 @@ void ThingTypeManager::loadXml(const std::string& file)
         }
 
         m_xmlLoaded = true;
-        g_logger.debug("items.xml read successfully.");
+        g_logger.info("items.xml read successfully.");
     } catch (const std::exception& e) {
         g_logger.error(stdext::format("Failed to load '%s' (XML file): %s", file, e.what()));
     }

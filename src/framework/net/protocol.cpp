@@ -40,9 +40,22 @@ Protocol::~Protocol()
 
 void Protocol::connect(const std::string_view host, uint16_t port)
 {
+    g_logger.info(stdext::format("Protocol::connect - Connecting to %s:%d", host, port));
+
     m_connection = std::make_shared<Connection>();
-    m_connection->setErrorCallback([capture0 = asProtocol()](auto&& PH1) { capture0->onError(std::forward<decltype(PH1)>(PH1));    });
-    m_connection->connect(host, port, [capture0 = asProtocol()] { capture0->onConnect(); });
+    g_logger.info("Created new connection instance");
+
+    m_connection->setErrorCallback([capture0 = asProtocol()](auto&& PH1) { 
+        g_logger.info("Connection error callback triggered");
+        capture0->onError(std::forward<decltype(PH1)>(PH1));    
+    });
+
+    m_connection->connect(host, port, [capture0 = asProtocol()] {
+        g_logger.info("Connection success callback triggered"); 
+        capture0->onConnect();
+    });
+
+    g_logger.info("Connection attempt initiated");
 }
 
 void Protocol::disconnect()
@@ -55,45 +68,68 @@ void Protocol::disconnect()
 
 void Protocol::send(const OutputMessagePtr& outputMessage)
 {
+    g_logger.info("Protocol::send - Starting message send");
+
     // encrypt
-    if (m_xteaEncryptionEnabled)
+    if (m_xteaEncryptionEnabled) {
+        g_logger.info("Encrypting message with XTEA");
         xteaEncrypt(outputMessage);
+    }
 
     // write checksum
-    if (m_sequencedPackets)
+    if (m_sequencedPackets) {
+        g_logger.info(stdext::format("Writing sequence number: %d", m_packetNumber));
         outputMessage->writeSequence(m_packetNumber++);
-    else if (m_checksumEnabled)
+    } else if (m_checksumEnabled) {
+        g_logger.info("Writing message checksum");
         outputMessage->writeChecksum();
+    }
 
     // write message size
+    g_logger.info("Writing message size");
     outputMessage->writeMessageSize();
 
     // send
-    if (m_connection)
+    if (m_connection) {
+        g_logger.info(stdext::format("Sending message of size: %d bytes", outputMessage->getMessageSize()));
         m_connection->write(outputMessage->getHeaderBuffer(), outputMessage->getMessageSize());
+    } else {
+        g_logger.error("Cannot send message - no active connection");
+    }
 
     // reset message to allow reuse
+    g_logger.info("Resetting output message");
     outputMessage->reset();
 }
 
 void Protocol::recv()
 {
+    g_logger.info("Protocol::recv - Starting message receive");
     m_inputMessage->reset();
 
     // first update message header size
     int headerSize = 2; // 2 bytes for message size
-    if (m_checksumEnabled)
+    if (m_checksumEnabled) {
         headerSize += 4; // 4 bytes for checksum
-    if (m_xteaEncryptionEnabled)
+        g_logger.info("Adding 4 bytes to header size for checksum");
+    }
+    if (m_xteaEncryptionEnabled) {
         headerSize += 2; // 2 bytes for XTEA encrypted message size
+        g_logger.info("Adding 2 bytes to header size for XTEA encryption");
+    }
+    g_logger.info(stdext::format("Setting header size to %d bytes", headerSize));
     m_inputMessage->setHeaderSize(headerSize);
 
     // read the first 2 bytes which contain the message size
-    if (m_connection)
+    if (m_connection) {
+        g_logger.info("Reading initial 2 bytes for message size");
         m_connection->read(2, [capture0 = asProtocol()](auto&& PH1, auto&& PH2) {
-        capture0->internalRecvHeader(std::forward<decltype(PH1)>(PH1),
-        std::forward<decltype(PH2)>(PH2));
-    });
+            capture0->internalRecvHeader(std::forward<decltype(PH1)>(PH1),
+            std::forward<decltype(PH2)>(PH2));
+        });
+    } else {
+        g_logger.error("No active connection to read from");
+    }
 }
 
 void Protocol::internalRecvHeader(uint8_t* buffer, uint16_t size)
@@ -112,36 +148,47 @@ void Protocol::internalRecvHeader(uint8_t* buffer, uint16_t size)
 
 void Protocol::internalRecvData(uint8_t* buffer, uint16_t size)
 {
+    g_logger.info(stdext::format("Protocol::internalRecvData - Received %d bytes", size));
+
     // process data only if really connected
     if (!isConnected()) {
         g_logger.traceError("received data while disconnected");
         return;
     }
 
+    g_logger.info("Filling input message buffer");
     m_inputMessage->fillBuffer(buffer, size);
 
     bool decompress = false;
     if (m_sequencedPackets) {
+        g_logger.info("Checking sequenced packet compression flag");
         decompress = (m_inputMessage->getU32() & 1 << 31);
+        g_logger.info(stdext::format("Message compression: %s", decompress ? "enabled" : "disabled"));
     } else if (m_checksumEnabled && !m_inputMessage->readChecksum()) {
         g_logger.traceError(stdext::format("got a network message with invalid checksum, size: %i", (int)m_inputMessage->getMessageSize()));
         return;
     }
 
     if (m_xteaEncryptionEnabled) {
+        g_logger.info("Attempting XTEA decryption");
         if (!xteaDecrypt(m_inputMessage)) {
             g_logger.traceError("failed to decrypt message");
             return;
         }
+        g_logger.info("XTEA decryption successful");
     }
 
     if (decompress) {
+        g_logger.info("Decompressing message");
         static uint8_t zbuffer[InputMessage::BUFFER_MAXSIZE];
 
         m_zstream.next_in = m_inputMessage->getDataBuffer();
         m_zstream.next_out = zbuffer;
         m_zstream.avail_in = m_inputMessage->getUnreadSize();
         m_zstream.avail_out = InputMessage::BUFFER_MAXSIZE;
+
+        g_logger.info(stdext::format("Compression info - available in: %d, available out: %d", 
+            m_zstream.avail_in, m_zstream.avail_out));
 
         int32_t ret = inflate(&m_zstream, Z_FINISH);
         if (ret != Z_OK && ret != Z_STREAM_END) {
@@ -150,6 +197,8 @@ void Protocol::internalRecvData(uint8_t* buffer, uint16_t size)
         }
 
         const uint32_t totalSize = m_zstream.total_out;
+        g_logger.info(stdext::format("Decompression complete - total size: %d", totalSize));
+        
         inflateReset(&m_zstream);
         if (totalSize == 0) {
             g_logger.traceError(stdext::format("invalid size of decompressed message - %i", totalSize));
@@ -158,8 +207,10 @@ void Protocol::internalRecvData(uint8_t* buffer, uint16_t size)
 
         m_inputMessage->fillBuffer(zbuffer, totalSize);
         m_inputMessage->setMessageSize(m_inputMessage->getHeaderSize() + totalSize);
+        g_logger.info(stdext::format("Final message size after decompression: %d", m_inputMessage->getMessageSize()));
     }
 
+    g_logger.info("Processing received message");
     onRecv(m_inputMessage);
 }
 
@@ -168,6 +219,9 @@ void Protocol::generateXteaKey()
     std::random_device rd;
     std::uniform_int_distribution<uint32_t > unif;
     std::generate(m_xteaKey.begin(), m_xteaKey.end(), [&unif, &rd] { return unif(rd); });
+    
+    g_logger.info(stdext::format("Generated XTEA key: [%u, %u, %u, %u]", 
+        m_xteaKey[0], m_xteaKey[1], m_xteaKey[2], m_xteaKey[3]));
 }
 
 namespace

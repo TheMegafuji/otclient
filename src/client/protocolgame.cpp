@@ -40,35 +40,54 @@ void ProtocolGame::login(const std::string_view accountName, const std::string_v
 
 void ProtocolGame::onConnect()
 {
+    g_logger.info("ProtocolGame::onConnect - Connection established");
+
     m_firstRecv = true;
     Protocol::onConnect();
 
     m_localPlayer = g_game.getLocalPlayer();
+    g_logger.info("Local player initialized");
 
-    if (g_game.getFeature(Otc::GameProtocolChecksum))
+    if (g_game.getFeature(Otc::GameProtocolChecksum)) {
+        g_logger.info("Enabling protocol checksum");
         enableChecksum();
+    }
 
-    if (!g_game.getFeature(Otc::GameChallengeOnLogin))
+    if (!g_game.getFeature(Otc::GameChallengeOnLogin)) {
+        g_logger.info("No challenge required, sending direct login packet");
         sendLoginPacket(0, 0);
+    } else {
+        g_logger.info("Challenge-based login enabled, waiting for server challenge");
+    }
 
+    g_logger.info("Starting to receive data");
     recv();
 }
 
 void ProtocolGame::onRecv(const InputMessagePtr& inputMessage)
 {
+    g_logger.info("ProtocolGame::onRecv - Received message");
+
     if (m_firstRecv) {
+        g_logger.info("Processing first received message");
         m_firstRecv = false;
 
         if (g_game.getFeature(Otc::GameMessageSizeCheck)) {
+            g_logger.info("Performing message size check");
             const int size = inputMessage->getU16();
+            g_logger.info(stdext::format("Expected message size: %d, Actual unread size: %d", size, inputMessage->getUnreadSize()));
+            
             if (size != inputMessage->getUnreadSize()) {
-                g_logger.traceError("invalid message size");
+                g_logger.traceError(stdext::format("Invalid message size - expected %d but got %d", size, inputMessage->getUnreadSize()));
                 return;
             }
+            g_logger.info("Message size check passed");
         }
     }
 
+    g_logger.info("Parsing message");
     parseMessage(inputMessage);
+    g_logger.info("Message parsed, receiving next message");
     recv();
 }
 

@@ -765,7 +765,7 @@ void X11Window::poll()
                     break;
                 std::string text = buf;
 
-                //g_logger.debug("char: ", buf[0], " code: ", (int)((uint8_t)buf[0]));
+                //g_logger.info("char: ", buf[0], " code: ", (int)((uint8_t)buf[0]));
 
                 if (m_onInputEvent && text.length() > 0) {
                     m_inputEvent.reset(Fw::KeyTextInputEvent);

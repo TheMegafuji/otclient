@@ -251,7 +251,7 @@ void CreatureManager::loadSpawns(const std::string& fileName)
         }
 
         m_spawnLoaded = true;
-        g_logger.debug("Spawns read successfully.");
+        g_logger.info("Spawns read successfully.");
     } catch (const std::exception& e) {
         g_logger.error(stdext::format("Failed to load '%s': %s", fileName, e.what()));
     }
@@ -272,7 +272,7 @@ void CreatureManager::saveSpawns(const std::string& fileName)
         if (!doc.save_file(("data" + fileName).c_str(), "\t", pugi::format_default, pugi::encoding_utf8)) {
             throw Exception("failed to save spawns XML %s", fileName);
         }
-        g_logger.debug("Spawns saved successfully.");
+        g_logger.info("Spawns saved successfully.");
     } catch (const std::exception& e) {
         g_logger.error(stdext::format("Failed to save '%s': %s", fileName, e.what()));
     }
@@ -367,7 +367,7 @@ SpawnPtr CreatureManager::getSpawn(const Position& centerPos)
     const auto it = m_spawns.find(centerPos);
     if (it != m_spawns.end())
         return it->second;
-    g_logger.debug(stdext::format("failed to find spawn at center %s", stdext::to_string(centerPos)));
+    g_logger.info(stdext::format("failed to find spawn at center %s", stdext::to_string(centerPos)));
     return nullptr;
 }
 
